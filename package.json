@@ -1,0 +1,29 @@
+{
+  "name": "redis-gui",
+  "version": "1.0.0",
+  "description": "Redis-GUI Application build on the modern web with Electron",
+  "main": "main.js",
+  "dependencies": {
+    "electron": "^1.7.9",
+    "lodash": "^4.17.4"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danielsss/Redis-GUI.git"
+  },
+  "keywords": [
+    "redis-gui",
+    "redis",
+    "gui"
+  ],
+  "author": "Daniels.Sun",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/danielsss/Redis-GUI/issues"
+  },
+  "homepage": "https://github.com/danielsss/Redis-GUI#readme"
+}
