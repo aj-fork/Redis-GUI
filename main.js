@@ -26,6 +26,7 @@ class Application {
     }
 
     start(){
+        require("./src/bin/redis-commander");
         this[PRIVATE.INIT_EVENT]();
     }
 

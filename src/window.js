@@ -24,12 +24,13 @@ class Window {
 
     buildWindow(){
         this._win = new BrowserWindow(this._config);
-        let file = url.format({
-            pathname: path.normalize(path.join(__dirname, "../test/views/index.html")),
-            protocol: "file",
-            slashes: true
-        });
-        this._win.loadURL(file);
+        // let file = url.format({
+        //     pathname: path.normalize(path.join(__dirname, "../test/views/index.html")),
+        //     protocol: "file",
+        //     slashes: true
+        // });
+        // this._win.loadURL(file);
+        this._win.loadURL("http://127.0.0.1:8081");
     }
 
     showWindow(){
