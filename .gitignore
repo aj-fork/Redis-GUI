@@ -60,3 +60,6 @@ typings/
 # vscode
 .vscode
 
+# config file
+.redis-commander
+

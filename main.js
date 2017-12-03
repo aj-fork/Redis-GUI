@@ -2,6 +2,7 @@
 
 const {app, globalShortcut, BrowserWindow} = require("electron");
 const Window = require("./src/window");
+const RedisApp = require("./src/bin/redis-commander");
 
 const APP_EVENTS = {
     READY: "ready",
@@ -23,10 +24,12 @@ const SHORTCUTS = {
 class Application {
     constructor(){
         this.window = new Window();
+        this.redisApp = new RedisApp();
     }
 
     start(){
-        require("./src/bin/redis-commander");
+        this.redisApp.setupConfig();
+        this.redisApp.startWebApp();
         this[PRIVATE.INIT_EVENT]();
     }
 
@@ -35,6 +38,7 @@ class Application {
         app.on(APP_EVENTS.ALL_CLOSED, this[PRIVATE.ALL_CLOSED].bind(this));
     }
     [PRIVATE.ON_READY](){
+        this.window.setScreenSize();
         this.window.buildWindow();
         this.window.showWindow();
         this[PRIVATE.REGISTER_SHORTCUT]();

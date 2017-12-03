@@ -1,6 +1,8 @@
 "use strict";
-var fs = require("fs");
-var path = require("path");
+
+const fs = require("fs");
+const path = require("path");
+const config = require("../../config");
 
 exports.split = function (str) {
     var results = [];
@@ -85,7 +87,7 @@ exports.distinct = function (items) {
 };
 
 var encodeHTMLEntities = function (string, callback) {
-    callback(string.replace(/[\u00A0-\u2666<>\&]/g, function (c) {
+    callback(string.replace(/[\u00A0-\u2666<>&]/g, function (c) {
         return "&" +
       (encodeHTMLEntities.entityTable[c.charCodeAt(0)] || "#" + c.charCodeAt(0)) + ";";
     }));
@@ -101,8 +103,8 @@ encodeHTMLEntities.entityTable = {
     62: "gt"
 };
 var decodeHTMLEntities = function (string, callback) {
-    callback(string.replace(/\&(\w)*\;/g, function (c) {
-        return String.fromCharCode(decodeHTMLEntities.entityTable[c.substring(1, c.indexOf("\;"))]);
+    callback(string.replace(/&(\w)*;/g, function (c) {
+        return String.fromCharCode(decodeHTMLEntities.entityTable[c.substring(1, c.indexOf(";"))]);
     }));
 };
 
@@ -145,24 +147,28 @@ exports.getConfig = function (callback) {
     });
 };
 
+exports.getConfigSync = function(configPath){
+    let data = null;
+    if(fs.existsSync(configPath)){
+        data = fs.readFileSync(configPath, {encoding: "utf8"});
+    }
+    
+    if(!data) return {};
+    try{
+        data = JSON.parse(data);
+    }catch(e){
+        console.error(e);
+        return {};
+    }
+    return data;
+};
+
 exports.saveConfig = function (config, callback) {
-    fs.writeFile(getConfigPath(), JSON.stringify(config), function (err) {
-        if (err) {
-            callback(err);
-        } else {
-            callback(null);
-        }
-    });
+    fs.writeFile(getConfigPath(), JSON.stringify(config), callback);
 };
 
 exports.deleteConfig = function (callback) {
-    fs.unlink(getConfigPath(), function (err) {
-        if (err) {
-            callback(err);
-        } else {
-            callback(null);
-        }
-    });
+    fs.unlink(getConfigPath(), callback);
 };
 
 exports.containsConnection = function (connectionList, object) {
@@ -176,11 +182,13 @@ exports.containsConnection = function (connectionList, object) {
 };
 
 function getConfigPath () {
-    var homePath = process.env[(process.platform == "win32") ? "USERPROFILE" : "HOME"];
+    let homePath = config.configPath;
     if (typeof homePath == "undefined") {
-        console.log("Home directory not found for configuration file. Using current directory as fallback.");
+        console.info("Home directory not found for configuration file. Using current directory as fallback.");
         homePath = ".";
     }
-    var configPath = path.join(homePath, ".redis-commander");
+    let configPath = path.join(homePath, ".redis-commander");
     return configPath;
 }
+
+exports.getConfigPath = getConfigPath;

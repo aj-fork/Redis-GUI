@@ -61,7 +61,7 @@ module.exports = function (httpServerOptions, _redisConnections, nosave, rootPat
 
     app.listen(httpServerOptions.webPort, httpServerOptions.webAddress);
 
-    console.log("listening on ", httpServerOptions.webAddress, ":", httpServerOptions.webPort);
+    console.info("listening on ", httpServerOptions.webAddress, ":", httpServerOptions.webPort);
 };
 
 function httpAuth (username, password) {
@@ -93,7 +93,7 @@ function logout (hostname, port, db, callback) {
 }
 
 function login (label, hostname, port, password, dbIndex, callback) {
-    console.log("connecting... ", hostname, port);
+    console.info("connecting... ", hostname, port);
     var client = new Redis(port, hostname);
     client.label = label;
     redisConnections.push(client);
@@ -101,7 +101,7 @@ function login (label, hostname, port, password, dbIndex, callback) {
         console.error("Redis error", err.stack);
     });
     redisConnections.getLast().on("end", function () {
-        console.log("Connection closed. Attempting to Reconnect...");
+        console.info("Connection closed. Attempting to Reconnect...");
     });
     if (password) {
         return redisConnections.getLast().auth(password, function (err) {
@@ -128,14 +128,14 @@ function login (label, hostname, port, password, dbIndex, callback) {
 
         return redisConnections.getLast().select(dbIndex, function (err) {
             if (err) {
-                console.log("could not select database", err.stack);
+                console.info("could not select database", err.stack);
                 if (callback) {
                     callback(err);
                     callback = null;
                 }
                 return;
             }
-            console.log("Using Redis DB #" + dbIndex);
+            console.info("Using Redis DB #" + dbIndex);
             return callback();
         });
     }
