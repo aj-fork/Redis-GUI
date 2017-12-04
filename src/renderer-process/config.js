@@ -1,7 +1,7 @@
 "use strict";
 
-const {ipcRender} = require("electron");
-/* global window */
+const {ipcRenderer} = require("electron");
+/* global window, $*/
 
 window.nac = {test: true};
 
@@ -9,8 +9,21 @@ const WINDOW_EVENTS = {
     RENDERER: "renderer-process-event",
     MAIN: "main-process-event"
 };
+ipcRenderer.on(WINDOW_EVENTS.MAIN, (sender, res)=>{
+    if(res.err){
+        $("#msgBox").text(res.message || res.errorStack);
+        setTimeout(()=>{
+            $("#msgBox").text("");
+        }, 1000 * 3);
+    }
+});
+const onReceiveData = function(){
+    
+    let form = $("#formData").serializeArray();
+    sendConfig(form);
+};
 
-const getConfig = function(data){
+const sendConfig = function(data){
     if(!data) return false;
     //TODO: receive config
     if(typeof(data) === "string"){
@@ -22,9 +35,6 @@ const getConfig = function(data){
             return false;
         }
     }
-    sendConfig(data);
+    ipcRenderer.send(WINDOW_EVENTS.RENDERER, data);
 };
-const sendConfig = function(data){
-    ipcRender.send(WINDOW_EVENTS.RENDERER, data);
-};
-window.getConfig = getConfig;
+window.onReceiveData = onReceiveData;

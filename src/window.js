@@ -5,7 +5,7 @@ const {ipcMain, BrowserWindow} = electron;
 const config = require("../config");
 const fs = require("fs");
 const myUtils = require("./lib/util");
-const RedisCommander = require("./bin/redis-commander");
+const Redis = require("ioredis");
 
 const PRIVATE = {
     SAVE_CONFIG: Symbol("_saveConfig"),
@@ -23,12 +23,21 @@ const WINDOW_EVENTS = {
 };
 
 class Window {
-    constructor(){
+    constructor(app){
+        this._app = app || {};
         this._win = null;
         this._config = config.window;
-        if(fs.existsSync(myUtils.getConfigPath())){
+        this._configPath = myUtils.getConfigPath();
+        if(!this._configPath){
+            return console.error(new Error("Nowhere to write .redis-commander config"));
+        }
+        if(fs.existsSync(this._configPath)){
+            this._app.isConfigFileExist = true;
+            this._isConfigFileExist = true;
             this._loadUrl = config.loadUrl;
         }else{
+            this._app.isConfigFileExist = false;
+            this._isConfigFileExist = false;
             this._loadUrl = config.initConfigUrl;
         }
     }
@@ -36,6 +45,7 @@ class Window {
     buildWindow(){
         this._win = new BrowserWindow(this._config);
         this._win.loadURL(this._loadUrl);
+        this[PRIVATE.INIT_EVENT]();
     }
 
     showWindow(){
@@ -60,33 +70,81 @@ class Window {
         this._win = null;
     }
     [PRIVATE.ON_RP_EVENT](event, data){
-        this[PRIVATE.SAVE_CONFIG](data);
+        //Auth data first & test for redis is available to connect
+        if(data.length === 0) {
+            return event.sender.send(WINDOW_EVENTS.MAIN, {err: true, message: "Invalid Params"});
+        }
+        let info = {};
+        for(let i = 0; i < data.length; i++){
+            info[data[i].name] = data[i].value;
+        }
+        
+        let err = undefined;
+        if(!info["redis-port"]) err = "Redis Port Required";
+        if(!info["redis-host"]) err = "Redis Host Required";
+        if(err !== undefined) {
+            return event.sender.send(WINDOW_EVENTS.MAIN, {err: true, message: err});
+        }
+        let client = new Redis({
+            port: info["redis-port"],
+            host: info["redis-host"],
+            family: 4,
+            password: info["redis-password"] || "",
+        });
+        
+        client.once("ready", ()=>{
+            //console.info("Connect to server success, then go to next");
+            client = null;
+            this[PRIVATE.SAVE_CONFIG](info);
+        });
+
+        const onError = function(err){
+            event.sender.send(WINDOW_EVENTS.MAIN, 
+                {
+                    err: true, 
+                    message: `Connect to ${info["redis-host"]}:${info["redis-port"]} failed`,
+                    errorStack: err.message
+                }
+            );
+            client.disconnect();
+            console.error(err);
+        };
+        client.on("error", onError);
     }
     [PRIVATE.SAVE_CONFIG](data){
-        // Start web app if config file is exists
-        if(fs.existsSync(config.configPath)) {
-            // TODO: reload page, and initializing redis web app
-            // Start redis-commander web server
-            let app = new RedisCommander();
-            app.startWebApp();
-            this._loadUrl = config.loadUrl;
-            return;
+        //Write config to cache/.redis-commander
+        let fd = fs.openSync(this._configPath, "w+");
+        if(!fd) return console.error("Create config file %s failed", this._configPath);
+        let info = {
+            "sidebarWidth":250,
+            "locked":false,
+            "CLIHeight":50,
+            "CLIOpen":false,
+            "default_connections":[
+                {
+                    "label": data["label"] || "Redis_1",
+                    "host": data["redis-host"],
+                    "port": data["redis-port"],
+                    "password": data["redis-password"] || "",
+                    "dbIndex": 0
+                }
+            ]
+        };
+        
+        try{
+            info = JSON.stringify(info);
+        }catch(e){
+            console.error("Parse post data error:%j", e);
         }
 
-        //Write config to cache/.redis-commander
-        let fd = fs.openSync(config.configPath, "w+");
-        if(!fd) return console.error("Create config file %s failed", config.configPath);
-        if(typeof(data) !== "string"){
-            try{
-                data = JSON.stringify(data);
-            }catch(e){
-                console.error("Parse post data error:%j", e);
-                let data = {continue: true};
-                return this._win.webContents.send(WINDOW_EVENTS.MAIN, data);
-            }
-        }
-        fs.writeSync(fd, data, 0, "utf8");
-        fd.close();
+        fs.writeSync(fd, info, 0, "utf8");
+        fs.close(fd, ()=>{});
+
+        this._app.redisApp.setupConfig();
+        this._app.redisApp.startWebApp(data);
+        this._loadUrl = config.loadUrl;
+        this._win.loadURL(this._loadUrl);
+        //this._win.webContents.send(WINDOW_EVENTS.MAIN, {err: false, message:"Connect to server success, then go to next."});
     }
 }
 

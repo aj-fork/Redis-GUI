@@ -23,14 +23,16 @@ const SHORTCUTS = {
 
 class Application {
     constructor(){
-        this.window = new Window();
         this.redisApp = new RedisApp();
+        this.window = new Window(this);
     }
 
     start(){
-        this.redisApp.setupConfig();
-        this.redisApp.startWebApp();
         this[PRIVATE.INIT_EVENT]();
+        if(this.isConfigFileExist){
+            this.redisApp.setupConfig();
+            this.redisApp.startWebApp();
+        }
     }
 
     [PRIVATE.INIT_EVENT](){

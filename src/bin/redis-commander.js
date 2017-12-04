@@ -43,17 +43,20 @@ class RedisCommander {
             "redis-db": "",
             "http-auth-username": "",
             "http-auth-password": "",
-            "address": config.redisCommander.host,
-            "port": config.redisCommander.port,
-            "nosave": "",
-            "save": "",
+            "address": "",
+            "port": "",
+            "nosave": false,
+            "save": true,
             "noload": "",
             "clear-config": false,
             "root-pattern": "*"
         };
     }
 
-    startWebApp(){
+    startWebApp(data){
+        data = data || {};
+        this._args.address = data["address"] || config.webServer.address;
+        this._args.port = data["port"] || config.webServer.port;
         let args = this._args;
         let httpServerOptions = {
             webPort: args.port, 
@@ -61,7 +64,7 @@ class RedisCommander {
             username: args["http-auth-username"], 
             password: args["http-auth-password"]
         };
-        app(httpServerOptions, this._connections, args["nosave"], args["root-pattern"]);
+        app(httpServerOptions, this._connections, false, args["root-pattern"]);
     }
     
     setupConfig(){

@@ -17,10 +17,10 @@ exports.window = {
 };
 
 exports.configPath = path.normalize(path.join(__dirname, "/cache/"));
-exports.redisCommander = {
-    port: 8081, host: "127.0.0.1"
+exports.webServer = {
+    port: 8081, address: "127.0.0.1"
 };
-exports.loadUrl = `http://127.0.0.1:${exports.redisCommander.port}`;
+exports.loadUrl = `http://${exports.webServer.address}:${exports.webServer.port}`;
 // Initializing config, run at first time
 exports.initConfigUrl = url.format({
     pathname: path.normalize(path.join(__dirname, "/src/web/views/index.html")),
