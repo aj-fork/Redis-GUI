@@ -23,7 +23,7 @@ exports.redisCommander = {
 exports.loadUrl = `http://127.0.0.1:${exports.redisCommander.port}`;
 // Initializing config, run at first time
 exports.initConfigUrl = url.format({
-    pathname: path.normalize(path.join(__dirname, "/test/views/index.html")),
+    pathname: path.normalize(path.join(__dirname, "/src/web/views/index.html")),
     protocol: "file",
     slashes: true
 });
