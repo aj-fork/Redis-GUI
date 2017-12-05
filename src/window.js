@@ -113,6 +113,9 @@ class Window {
     }
     [PRIVATE.SAVE_CONFIG](data){
         //Write config to cache/.redis-commander
+        if(fs.existsSync(this._configPath)){
+            fs.writeFileSync(this._configPath);
+        }
         let fd = fs.openSync(this._configPath, "w+");
         if(!fd) return console.error("Create config file %s failed", this._configPath);
         let info = {

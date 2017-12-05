@@ -61,6 +61,6 @@ typings/
 .vscode
 
 # config file
-cache/*
+cache/.redis-commander
 .redis-commander
 
