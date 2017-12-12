@@ -1,8 +1,10 @@
 "use strict";
 
 const {app, globalShortcut, BrowserWindow} = require("electron");
-const Window = require("./src/window");
-const RedisApp = require("./src/bin/redis-commander");
+const EventCenter = require("./src/ipc/event-center");
+const Window = require("./src/index");
+
+process.env.DEBUG = "*,-not_this";
 
 const APP_EVENTS = {
     READY: "ready",
@@ -23,16 +25,13 @@ const SHORTCUTS = {
 
 class Application {
     constructor(){
-        this.redisApp = new RedisApp();
-        this.window = new Window(this);
+        this._ipc = new EventCenter(this);
+        this._mainWin = new Window(this);
     }
 
     start(){
+        this._ipc.start();
         this[PRIVATE.INIT_EVENT]();
-        if(this.isConfigFileExist){
-            this.redisApp.setupConfig();
-            this.redisApp.startWebApp();
-        }
     }
 
     [PRIVATE.INIT_EVENT](){
@@ -40,9 +39,8 @@ class Application {
         app.on(APP_EVENTS.ALL_CLOSED, this[PRIVATE.ALL_CLOSED].bind(this));
     }
     [PRIVATE.ON_READY](){
-        this.window.setScreenSize();
-        this.window.buildWindow();
-        this.window.showWindow();
+        this._mainWin.setScreenSize();
+        this._mainWin.buildWindow();
         this[PRIVATE.REGISTER_SHORTCUT]();
     }
     [PRIVATE.ALL_CLOSED](){

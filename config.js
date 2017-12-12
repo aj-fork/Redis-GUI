@@ -5,24 +5,26 @@ const url = require("url");
 exports.window = {
     width: 800, height: 600,
     show: false, title: "Redis-GUI",
-    icon: path.join(__dirname, "src/web/static/favicon.png"),
+    icon: null,
     webPreferences:{
         javascript:true,
         nodeIntegration:true,
         webSecurity: false,            
         experimentalFeatures:true,
         experimentalCanvasFeatures:true,
-        preload:path.normalize(path.join(__dirname, "/src/renderer-process/config.js")),
+        preload: null,
     }
 };
+exports.window.icon = path.normalize(path.join(__dirname, "src/web/static/favicon.png"));
+exports.window.webPreferences.preload = path.normalize(path.join(__dirname, "/src/rp/preloader.js"));
 
-exports.configPath = path.normalize(path.join(__dirname, "/cache/"));
-exports.webServer = {
-    port: 8081, address: "127.0.0.1"
-};
-exports.loadUrl = `http://${exports.webServer.address}:${exports.webServer.port}`;
-// Initializing config, run at first time
-exports.initConfigUrl = url.format({
+exports.redisConfigPath = path.normalize(path.join(__dirname, "/cache/"));
+exports.testUrl = url.format({
+    pathname: path.normalize(path.join(__dirname, "/test/views/index.html")),
+    protocol: "file",
+    slashes: true
+});
+exports.loadUrl = url.format({
     pathname: path.normalize(path.join(__dirname, "/src/web/views/index.html")),
     protocol: "file",
     slashes: true
