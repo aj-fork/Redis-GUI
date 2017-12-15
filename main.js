@@ -58,9 +58,11 @@ class Application {
             win.webContents.openDevTools();
         });
         globalShortcut.register(SHORTCUTS.RELOAD_PAGE, ()=>{
-            let win = BrowserWindow.getFocusedWindow();
-            if(!win) return;
-            win.reload();
+            return false;
+            //return console.info("Do not allow reload page");
+            // let win = BrowserWindow.getFocusedWindow();
+            // if(!win) return;
+            // win.reload();
         });
     }
 }

@@ -9,6 +9,7 @@
 
 const debug = require("debug")("redis-connector");
 const redis = require("redis");
+const _ = require("lodash");
 
 const PRIVATE = {
     ATTRS: {
@@ -17,7 +18,8 @@ const PRIVATE = {
     },
     METHODS: {
         INIT_EVENT: Symbol("_initEvent"),
-        CREATE_CONNECTOR: Symbol("_createConnector"), 
+        CREATE_CONNECTOR: Symbol("_createConnector"),
+        IS_CREATED: Symbol("_isCreated"),
     }
 };
 
@@ -25,6 +27,7 @@ const REDIS_EVENTS = {
     READY: "ready",
     CONNECT: "connect",
     ERROR: "error",
+    END: "end",
 
     //listener
     ON_READY: Symbol("_onReady"),
@@ -41,35 +44,79 @@ class Redis {
      */
     constructor(opts){
         this._opts = opts || {};
-        this._client = null;
-        this[PRIVATE.METHODS.CREATE_CONNECTOR]();
-        this[PRIVATE.METHODS.INIT_EVENT]();
+        this._clients = [];
+        if(!_.isEmpty(opts)){
+            this[PRIVATE.METHODS.CREATE_CONNECTOR]();
+        }
     }
 
-    get interfaces(){
-        return this._client;
+    /**
+     * @description Redis clients 
+     * @return {Array} Array(redis client)
+     */
+    get clients(){
+        return this._clients;
     }
 
-    [PRIVATE.METHODS.CREATE_CONNECTOR](){
-        this._client = redis.createClient(this._opts.port, this._opts.host);
-    }
- 
-    [PRIVATE.METHODS.INIT_EVENT](){
-        if(!this._client) return false;
-        this._client.once(REDIS_EVENTS.READY, this[REDIS_EVENTS.ON_READY].bind(this));
-        this._client.on(REDIS_EVENTS.CONNECT, this[REDIS_EVENTS.ON_CONNECT].bind(this));
-        this._client.on(REDIS_EVENTS.ERROR, this[REDIS_EVENTS.ON_ERROR].bind(this));
+    /**
+     * @description Create redis client
+     * @param {*} opts 
+     */
+    createRedisClient(opts, next){
+        opts = opts || {};
+        if(_.isEmpty(opts)) return null;
+        this._opts = opts;
+        this[PRIVATE.METHODS.CREATE_CONNECTOR](next);
     }
 
-    //listener
-    [REDIS_EVENTS.ON_READY](){
-        debug("Connection is ready");
+    /**
+     * @description disconnect redis
+     * @param {Number} index
+     * @return Object 
+     */
+    disconnectRedis(index){
+        if(!_.isNumber(index)) return {index: index, disconnected: false};
+        this._opts.port = this._clients[index].port;
+        this._opts.host = this._clients[index].host;
+        this._clients[index].quit();
+        return {index: index, disconnected: true};
     }
-    [REDIS_EVENTS.ON_CONNECT](){
-        debug("Stream is connected to server %s:%s", this._opts.host, this._opts.port);
+
+    [PRIVATE.METHODS.CREATE_CONNECTOR](next){
+        if(this[PRIVATE.METHODS.IS_CREATED]()) return next("The client is created which doesn't to create again");
+        let client = redis.createClient(this._opts.port, this._opts.host);
+        let label = `${this._opts.host}:${this._opts.port}`;
+        if(this._opts.label) label = this._opts.label;
+        client.label = label;
+        client.index = this._clients.length;
+        client.port = this._opts.port;
+        client.host = this._opts.host;
+        client.once(REDIS_EVENTS.READY, ()=>{
+            console.info("Redis client is ready");
+            this._clients[client.index] = client;
+            next(null, {label: client.label, index: client.index, isConnected: true});
+        });
+        client.on(REDIS_EVENTS.CONNECT, ()=>{
+            console.info("Redis %s:%s is connected", this._opts.host, this._opts.port);
+        });
+        client.on(REDIS_EVENTS.ERROR, (err)=>{
+            console.info("Connect to redis %s:%s error:%s", this._opts.host, this._opts.port, err.stack || err.message);
+            next(null, {label: client.label, index: client.index, isConnected: false});
+            client.end(true);
+            client = null;
+        });
+        client.on(REDIS_EVENTS.END, ()=>{
+            console.info("Connection %s:%s is disconnected by client", this._opts.host, this._opts.port);
+        });
     }
-    [REDIS_EVENTS.ON_ERROR](err){
-        debug("Has error\n%O", err);
+
+    [PRIVATE.METHODS.IS_CREATED](){
+        if(this._clients.length === 0) return false;
+        let label = this._opts.label ? this._opts.label : `${this._opts.host}:${this._opts.port}`;
+        for(let i = 0; i < this._clients.length; i++){
+            if(this._clients[i].label === label) return true;
+        }
+        return false;
     }
 }
 

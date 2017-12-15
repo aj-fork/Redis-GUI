@@ -50,7 +50,7 @@ const loadConfig = function(){
     }catch(e){
         debug("Reading file error %s", e.stack || e.message || e);
     }
-
+    if(_.isEmpty(config)) return null;
     return sto(config);
 };
 const getConfigPath = function(){

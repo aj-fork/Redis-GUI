@@ -8,28 +8,15 @@ module.exports = {
         "sourceType": "module",
         "ecmaFeatures": {
             "impliedStrict": true
-        }
+        },
+        "ecmaVersion": 8
     },
     "rules": {
-        "indent": [
-            "error",
-            4
-        ],
-        "linebreak-style": [
-            "error",
-            "unix"
-        ],
-        "quotes": [
-            "error",
-            "double"
-        ],
-        "semi": [
-            "error",
-            "always"
-        ],
-        "no-console":[
-            "error",
-            {"allow": ["info", "warn", "error"]}
-        ]
+        "indent": ["error", 4, {"SwitchCase": 1, "MemberExpression": 1}],
+        "linebreak-style": ["error","unix"],
+        "quotes": ["error","double"],
+        "semi": ["error","always"],
+        "no-console":["error",{"allow": ["log","info", "warn", "error"]}],
+        "switch-colon-spacing": "error"
     }
 };

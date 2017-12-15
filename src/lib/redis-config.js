@@ -7,6 +7,7 @@
 
 "use strict";
 const _utils = require("../utils/util");
+const _ = require("lodash");
 
 const PRIVATE = {
     ATTRS: {
@@ -16,7 +17,7 @@ const PRIVATE = {
 
 class RedisConfig {
     constructor(){
-        this[PRIVATE.ATTRS.CONFIG] = _utils.loadConfig();
+        this[PRIVATE.ATTRS.CONFIG] = _utils.loadConfig() || [];
     }
 
     /**
@@ -31,6 +32,17 @@ class RedisConfig {
      */
     update(){
         this[PRIVATE.ATTRS.CONFIG] = _utils.loadConfig();
+    }
+
+    /**
+     * @description get config by (index) or (host&port) from local cache
+     * @param {Object} opts
+     * @return {Object} config object
+     */
+    getConfig(opts){
+        opts = opts || {};
+        if(_.isEmpty(opts)) return null;
+        return _.find(this[PRIVATE.ATTRS.CONFIG], {port: opts.port, host: opts.host});
     }
 }
 module.exports = RedisConfig;

@@ -3,11 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <title>Redis-GUI</title>
+    <script>
+        window.$ = window.jQuery = require("../../src/rp/js/jquery-3.2.1.min.js");    
+    </script>    
 </head>
 <body>
     <h1>Hello World!</h1>
     We are using node <script>document.write(process.versions.node)</script>,
     Chrome <script>document.write(process.versions.chrome)</script>,
     and Electron <script>document.write(process.versions.electron)</script>.
+    <div id="redis-info-box"></div>
 </body>
+<script src="../../src/rp/js/page.js"></script>
 </html>

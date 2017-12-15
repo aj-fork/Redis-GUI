@@ -7,23 +7,32 @@
 
 "use strict";
 
-const debug = require("debug")("ipc:event-center");
 const EventEmitter = require("events").EventEmitter;
 const {ipcMain} = require("electron");
 const Protocol = require("./protocol");
+const Dispatcher = require("./dispatcher");
+
+const RedisConnector = require("../lib/redis-connector");
 const RedisConfig = require("../lib/redis-config");
+const RedisCmd = require("../lib/redis-cmd");
+const RedisString = require("../lib/redis-string");
+const RedisHash = require("../lib/redis-hash");
+
+const _ = require("lodash");
+const _async = require("async");
 
 const PRIVATE = {
     METHODS: {
         ON_RP_EVENT: Symbol("_onRpEvent"),
         ON_RP_READY: Symbol("_onRpReady"),
+
+        ON_REDIS_CONNECTED: Symbol("_onRedisConnected"),
+
+        DISPATCHER: Symbol("_dispatcher"),
     },
     ATTRS: {
         REDIS_CFG: Symbol("_redisConfig"),
-        REDIS_HASH: Symbol("_redisHash"),
-        REDIS_SET: Symbol("_redisSet"),
-        REDIS_STR: Symbol("_redisStr"),
-        REDIS_LIST: Symbol("_redisList"),
+        REDIS_CONN: Symbol("_redisConnector"),
     }
 };
 
@@ -32,9 +41,21 @@ const EVENTS = {
     MP_EVENT: "mp-event",
     //renderer-process
     RP_EVENT: "rp-event",
+    
     //preload script is ready state
     RP_READY: "rp-ready-to-work",
+    RP_READY_RE: "rp-ready-to-work-re",
+
+    //synchronous-rp-message
+    SYNCHRONOUS_RP_MSG: "synchronous-rp-message",
 };
+
+const METHODS = [
+    "get", "GET", 
+    "put", "PUT",
+    "delete", "DELETE",
+    "post", "POST"
+];
 
 
 /**
@@ -45,10 +66,22 @@ const EVENTS = {
 class EventCenter extends EventEmitter {
     constructor(app){
         super();
+
         this[PRIVATE.ATTRS.REDIS_CFG] = new RedisConfig();
+        this[PRIVATE.ATTRS.REDIS_CONN]= new RedisConnector();
+        
+        this._dispatcher = new Dispatcher(this);
+
+        this.RedisStr = new RedisString(this);
+        this.RedisHash = new RedisHash(this);
+
         this._ran = false;
         this._app = app || {};
         this._win = null;
+        this._connectors = [];
+
+        //current client
+        this.__client__ = null;
     }
 
     /**
@@ -66,44 +99,54 @@ class EventCenter extends EventEmitter {
         if(this._ran) return false;
         this._ran = true;
         ipcMain.on(EVENTS.RP_READY, this[PRIVATE.METHODS.ON_RP_READY].bind(this));
-        ipcMain.on(EVENTS.RP_EVENT, this[PRIVATE.METHODS.ON_RP_EVENT].bind(this));
+        ipcMain.on(EVENTS.SYNCHRONOUS_RP_MSG, this[PRIVATE.METHODS.SYNCHRONOUS_RP_MSG].bind(this));
     }
 
-    /**
-     * @description Sending config to renderer-process
-     */
-    updateConfig(){
-        if(!this._win) return false;
-        let info = {proto: Protocol.UPDATE_CONFIG, data: this[PRIVATE.ATTRS.REDIS_CFG].config};
-        console.info("send config to rp");
-        this._win.webContents.send(EVENTS.MP_EVENT, info);
-    }
-
-    [PRIVATE.METHODS.ON_RP_EVENT](event, data){
-        data = data || {};
-        let proto = data.proto;
+    [PRIVATE.METHODS.SYNCHRONOUS_RP_MSG](event, info){
+        let proto = info.proto;
+        let data = info.data || {};
+        let client = null;
+        
+        /* eslint-disable */
         switch(proto){
-        case Protocol.GET_HASH:
-            //TODO: get hash value
-            break;
-        case Protocol.DEL_HASH:
-            //TODO: delete hash value
-            break;
-        case Protocol.GET_CONNECTORS:
-            break;
-        case Protocol.GET_CONFIG:
-            break;
-        case Protocol.UPDATE_CONFIG_RE:
-            console.info("updated = %s",data.updated);
-            debug("Renderer-process config updated = %s and protocol = %d", data.updated, data.proto);
-            break;
+            case Protocol.CONNECT_REDIS:
+                this[PRIVATE.ATTRS.REDIS_CONN].createRedisClient(data, onResponse.bind({event: event}));
+                break;
+            
+            case Protocol.DISCONNECT_REDIS:
+                event.returnValue = {err: null, data: this[PRIVATE.ATTRS.REDIS_CONN].disconnectRedis(data.index)};
+                break;
+
+            case Protocol.GET_TOP_KEYS:
+                if(!_.isNumber(data.index)) return event.returnValue = {err: "Index can't be empty", data: null};
+                client = this[PRIVATE.ATTRS.REDIS_CONN].clients[data.index];
+                if(!client) event.returnValue = {err: "Not Found Client", data: null};
+                RedisCmd.TOPKEYS({client: client, pattern: data.pattern || "*", limit: data.limit || 100}, onResponse.bind({event: event}));
+                break;
+            
+            case Protocol.REDIS_OPERATIONS:
+                if(!_.isNumber(data.index)) return event.returnValue = {err: "Index can't be empty", data: null};
+                if(!data.key) return event.returnValue = {err: "The key is required", data: null};
+                if(METHODS.indexOf(data.method) < 0) return event.returnValue = {err: `Invalid method:${data.method}`, data: null};
+                this.__client__ = this[PRIVATE.ATTRS.REDIS_CONN].clients[data.index];
+                this._dispatcher.do(data, onResponse.bind({event: event}));
+                break;
         }
+        /* eslint-enable */
     }
 
     [PRIVATE.METHODS.ON_RP_READY](event, isReady){
         if(!isReady) return false;
-        console.info("Ready to update config");
-        this.updateConfig();
+        console.info("Loading config ...");
+        let config = this[PRIVATE.ATTRS.REDIS_CFG].config;
+        for(let i = 0; i < config.length; i++){
+            config[i].isConnected = false;
+        }
+        return event.returnValue = config;
     }
 }
+
+const onResponse = function(err, result){
+    this.event.returnValue = {err: err, data: result || null};
+};
 module.exports = EventCenter;

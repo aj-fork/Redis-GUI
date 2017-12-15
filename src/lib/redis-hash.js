@@ -7,5 +7,21 @@
 
 "use strict";
 
-class RedisHash {}
+class RedisHash {
+    constructor(app){
+        this._app = app || null;
+    }
+
+    getHash(key, callback){
+        if(!key) return callback("The key is required");
+        this._app.__client__.HGETALL(key, callback);
+    }
+
+    get methods(){
+        return {
+            get: this.getHash.bind(this),
+            GET: this.getHash.bind(this),
+        };
+    }
+}
 module.exports = RedisHash;

@@ -11,7 +11,6 @@ const electron = require("electron");
 const {BrowserWindow} = electron;
 const config = require("../config");
 const _utils = require("./utils/util");
-const EventCenter = require("./ipc/event-center");
 
 
 const PRIVATE = {
@@ -39,16 +38,15 @@ class Index {
         this._app._ipc.loader(this._win);
         this[PRIVATE.INIT_EVENT]();
         this._win.loadURL(config.testUrl);
-        //this._win.webContents.openDevTools();
+        this._win.webContents.openDevTools();
         this._win.show();
         return this._win;
     }
 
     setScreenSize(){
-        if(!this._config) return false;
         let bounds = electron.screen.getAllDisplays()[0].bounds;
-        this._config.height = bounds.height;
-        this._config.width = bounds.width;
+        config.window.height = bounds.height;
+        config.window.width = bounds.width;
         return true;
     }
 
