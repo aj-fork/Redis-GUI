@@ -2,7 +2,7 @@
  * @Author: Danielssssss 
  * @Date: 2017-12-11 17:34:43 
  * @Last Modified by: Danielssssss
- * @Last Modified time: 2017-12-16 00:27:15
+ * @Last Modified time: 2017-12-19 01:09:30
  */
 
 "use strict";
@@ -32,5 +32,6 @@ module.exports = {
     //GET_KEYS                : 40001,
     GET_TOP_KEYS            : 40001,
     REDIS_OPERATIONS        : 40002,
+    REDIS_COMMAND           : 40003,
 
 };

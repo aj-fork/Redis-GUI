@@ -18,4 +18,9 @@ $(document).ready(function(){
     let p = document.createElement("p");
     p.innerText = JSON.stringify(r);
     box.appendChild(p);
+
+    r = preloader.sendCommand({index:0, cmd: "hgetalla mcapp:devices:macosd"});
+    p = document.createElement("p");
+    p.innerText = JSON.stringify(r);
+    box.appendChild(p);
 });

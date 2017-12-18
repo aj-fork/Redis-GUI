@@ -16,7 +16,8 @@ const _async = require("async");
 * @param {Function} callback
 * @return {Object} parsed keys
 */
-const getTopKeys = function (opts, callback){
+const getTopKeys = function (opts = {}, callback){
+    if(!opts.client) return callback("The client instance is required");
     _async.waterfall([
         (cb)=>{
             opts.client.KEYS(opts.pattern, cb);
@@ -35,7 +36,13 @@ const getTopKeys = function (opts, callback){
     ], callback);
 };
 
-module.exports = {
-    topKeys: getTopKeys,
-    TOPKEYS: getTopKeys,
+const sendCommand = function(opts, callback){
+    if(!opts.client) return callback("The client instance is required");
+    opts.cmd = opts.cmd || "";
+    opts.client.send_command(opts.cmd, opts.args || [], callback);
 };
+
+module.exports.topKeys = getTopKeys;
+module.exports.TOPKEYS = getTopKeys;
+module.exports.sendCommand = sendCommand;
+module.exports.SENDCOMMAND = sendCommand;

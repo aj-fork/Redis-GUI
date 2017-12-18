@@ -87,7 +87,6 @@ class Preloader {
      * @return {Array} [{type: string, key: "user:id"}] 
      */
     getTopKeys(opts){
-        opts = opts || {};
         if(_.isEmpty(opts)) return {err: "The options is required"};
         if(!opts.limit) opts.limit = 100;
         let info = {proto: Protocol.GET_TOP_KEYS, data: opts};
@@ -102,10 +101,21 @@ class Preloader {
      * @return {Object}
      */
     getValueByKey(opts){
-        opts = opts || {};
         if(_.isEmpty(opts)) return {err: "The options is required"};
         opts.method = "GET";
         let info = {proto: Protocol.REDIS_OPERATIONS, data: opts};
+        let ret = ipcRenderer.sendSync(EVENTS.SYNCHRONOUS_RP_MSG, info);
+        return ret;
+    }
+
+    /**
+     * @description Sending cmd to redis
+     * @param {Object} opts {index:0, cmd:"keys *"}
+     */
+    sendCommand(opts){
+        if(_.isEmpty(opts)) return {err: "The options is required"};
+        if(_.isEmpty(opts.cmd)) return {err: "The options.cmd is required"};
+        let info = {proto: Protocol.REDIS_COMMAND, data: opts};
         let ret = ipcRenderer.sendSync(EVENTS.SYNCHRONOUS_RP_MSG, info);
         return ret;
     }

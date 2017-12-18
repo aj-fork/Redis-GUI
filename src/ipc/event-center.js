@@ -119,9 +119,9 @@ class EventCenter extends EventEmitter {
 
             case Protocol.GET_TOP_KEYS:
                 if(!_.isNumber(data.index)) return event.returnValue = {err: "Index can't be empty", data: null};
-                client = this[PRIVATE.ATTRS.REDIS_CONN].clients[data.index];
-                if(!client) event.returnValue = {err: "Not Found Client", data: null};
-                RedisCmd.TOPKEYS({client: client, pattern: data.pattern || "*", limit: data.limit || 100}, onResponse.bind({event: event}));
+                this.__client__ = this[PRIVATE.ATTRS.REDIS_CONN].clients[data.index];
+                if(!this.__client__) event.returnValue = {err: "Not Found Client", data: null};
+                RedisCmd.TOPKEYS({client: this.__client__, pattern: data.pattern || "*", limit: data.limit || 100}, onResponse.bind({event: event}));
                 break;
             
             case Protocol.REDIS_OPERATIONS:
@@ -130,6 +130,18 @@ class EventCenter extends EventEmitter {
                 if(METHODS.indexOf(data.method) < 0) return event.returnValue = {err: `Invalid method:${data.method}`, data: null};
                 this.__client__ = this[PRIVATE.ATTRS.REDIS_CONN].clients[data.index];
                 this._dispatcher.do(data, onResponse.bind({event: event}));
+                break;
+
+            case Protocol.REDIS_COMMAND:
+                if(!_.isNumber(data.index)) return event.returnValue = {err: "Index can't be empty", data: null};
+                this.__client__ = this[PRIVATE.ATTRS.REDIS_CONN].clients[data.index];
+                if(_.isEmpty(data.cmd)) return event.returnValue = {err: "The command is required", data: null};
+                let arr = _.compact(data.cmd.indexOf(" ") ? data.cmd.split(" "): [data.cmd]);
+                RedisCmd.SENDCOMMAND({
+                    client: this.__client__, 
+                    cmd: arr[0], 
+                    args: arr.length > 1 ? _.slice(arr, 1, arr.length) : [],
+                }, onResponse.bind({event: event}));
                 break;
         }
         /* eslint-enable */
@@ -147,6 +159,9 @@ class EventCenter extends EventEmitter {
 }
 
 const onResponse = function(err, result){
-    this.event.returnValue = {err: err, data: result || null};
+    this.event.returnValue = {
+        err: _.isObject(err) ? err.message || err.stack : err,
+        data: result || null
+    };
 };
 module.exports = EventCenter;
